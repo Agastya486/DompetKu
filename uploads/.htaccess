@@ -1,0 +1,5 @@
+# Only allow images to be served; never execute scripts in this folder.
+Options -ExecCGI
+<FilesMatch "\.(php|phtml|php3|php4|php5|phar)$">
+    Require all denied
+</FilesMatch>

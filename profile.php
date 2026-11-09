@@ -30,7 +30,44 @@ try {
 
 // Profile update process
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['start_totp'])) {
+    if (isset($_POST['upload_avatar'])) {
+        $file = $_FILES['avatar'] ?? null;
+
+        if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
+            $error = 'Pilih gambar terlebih dahulu!';
+        } elseif ($file['size'] > 2 * 1024 * 1024) {
+            $error = 'Ukuran gambar maksimal 2MB!';
+        } else {
+            $info = @getimagesize($file['tmp_name']);
+            $allowed = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'];
+
+            if (!$info || !isset($allowed[$info[2]])) {
+                $error = 'Format gambar harus JPG, PNG, atau WEBP!';
+            } else {
+                $filename = bin2hex(random_bytes(8)) . '.' . $allowed[$info[2]];
+
+                if (move_uploaded_file($file['tmp_name'], __DIR__ . '/uploads/' . $filename)) {
+                    try {
+                        $upd = $pdo->prepare("UPDATE users SET avatar = :avatar WHERE id = :id");
+                        $upd->execute([':avatar' => $filename, ':id' => $_SESSION['user_id']]);
+
+                        // Remove the old file if it exists
+                        if (!empty($user['avatar']) && is_file(__DIR__ . '/uploads/' . basename($user['avatar']))) {
+                            unlink(__DIR__ . '/uploads/' . basename($user['avatar']));
+                        }
+
+                        $_SESSION['avatar'] = $filename;
+                        header('Location: profile.php');
+                        exit;
+                    } catch (PDOException $e) {
+                        $error = 'Gagal menyimpan gambar. Silakan coba lagi.';
+                    }
+                } else {
+                    $error = 'Gagal mengunggah gambar.';
+                }
+            }
+        }
+    } elseif (isset($_POST['start_totp'])) {
         // Make a secret, not saving it to the database yet
         $_SESSION['totp_setup'] = generateTotpSecret();
     } elseif (isset($_POST['confirm_totp'])) {
@@ -39,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $inputCode   = $_POST['totp_code'] ?? '';
 
         if (empty($setupSecret)) {
-            $error = 'Sesi aktivasi tidak valid. Silakan ulangi.';
+            $error = 'Sesi aktivasi tidak valid. Silahkan ulangi.';
         } elseif (verifyTotpCode($setupSecret, $inputCode)) {
             try {
                 $upd = $pdo->prepare("UPDATE users SET totp_secret = :secret WHERE id = :id");
@@ -305,8 +342,14 @@ $userInitials = getInitials($user['fullname'] ?? 'User');
 
       <div class="flex items-center gap-3">
         <a href="profile.php"
-          class="w-9 h-9 grid place-items-center rounded-lg border border-line bg-raised text-sm font-semibold text-accent-400 hover:border-accent-600 transition-colors"
-          title="<?= htmlspecialchars($user['fullname']) ?>"><?= htmlspecialchars($userInitials) ?></a>
+          class="w-9 h-9 overflow-hidden grid place-items-center rounded-lg border border-line bg-raised text-sm font-semibold text-accent-400 hover:border-accent-600 transition-colors"
+          title="<?= htmlspecialchars($user['fullname']) ?>">
+          <?php if (!empty($user['avatar'])): ?>
+            <img src="uploads/<?= htmlspecialchars($user['avatar']) ?>" alt="Avatar" class="w-full h-full object-cover" />
+          <?php else: ?>
+            <?= htmlspecialchars($userInitials) ?>
+          <?php endif; ?>
+        </a>
         <a href="logout.php" class="text-sm text-ink-muted hover:text-danger transition-colors">Keluar</a>
       </div>
     </div>
@@ -321,9 +364,22 @@ $userInitials = getInitials($user['fullname'] ?? 'User');
 
       <!-- Profile summary card (Left) -->
       <div class="rounded-xl border border-line bg-raised/50 p-6 h-fit">
-        <div class="w-14 h-14 grid place-items-center rounded-full bg-accent-500/15 text-lg font-bold text-accent-400">
-          <?= htmlspecialchars($userInitials) ?>
+        <div class="w-14 h-14 overflow-hidden grid place-items-center rounded-full bg-accent-500/15 text-lg font-bold text-accent-400">
+          <?php if (!empty($user['avatar'])): ?>
+            <img src="uploads/<?= htmlspecialchars($user['avatar']) ?>" alt="Avatar" class="w-full h-full object-cover" />
+          <?php else: ?>
+            <?= htmlspecialchars($userInitials) ?>
+          <?php endif; ?>
         </div>
+
+        <form action="profile.php" method="POST" enctype="multipart/form-data" class="mt-4 space-y-2">
+          <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp" required
+            class="block w-full text-xs text-ink-muted file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-accent-600 file:text-white file:text-xs file:font-semibold hover:file:bg-accent-500 cursor-pointer" />
+          <button type="submit" name="upload_avatar"
+            class="cursor-pointer w-full py-2 bg-raised border border-line hover:border-accent-600 text-ink-muted hover:text-ink text-xs font-semibold rounded-lg transition-colors">
+            Ganti Foto
+          </button>
+        </form>
 
         <h2 class="mt-4 font-semibold text-white"><?= htmlspecialchars($user['fullname']) ?></h2>
         <p class="mt-0.5 text-sm text-ink-muted break-all"><?= htmlspecialchars($user['email']) ?></p>
@@ -474,7 +530,7 @@ $userInitials = getInitials($user['fullname'] ?? 'User');
         <div class="rounded-lg border border-accent-600/30 bg-accent-500/10 p-5 mb-5">
           <p class="text-sm text-ink-muted mb-4">
             Simpan kode pemulihan ini sekarang. Tiap kode hanya bisa dipakai <strong
-              class="text-white">sekali</strong> untuk login bila HP kamu hilang, dan tidak akan
+              class="text-white">sekali</strong> untuk login bila HP anda hilang, dan tidak akan
             ditampilkan lagi.
           </p>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -529,7 +585,7 @@ $userInitials = getInitials($user['fullname'] ?? 'User');
         </div>
       <?php elseif (empty($user['totp_secret'])): ?>
         <p class="text-sm text-ink-muted mb-4">
-          Tambahkan lapisan kedua agar akun tetap aman meski passwordmu bocor.
+          Tambahkan lapisan kedua akun semakin aman.
         </p>
         <form action="profile.php" method="POST">
           <button type="submit" name="start_totp"

@@ -52,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['step'] ?? '') === '2') {
                 $_SESSION['user_id']  = $newUserId;
                 $_SESSION['email']    = $email;
                     $_SESSION['fullname'] = $fullname;
+                    $_SESSION['avatar']   = null;
 
                     header('Location: dashboard.php');
                 exit;

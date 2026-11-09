@@ -43,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_id']  = $user['id'];
                 $_SESSION['email']    = $user['email'];
                 $_SESSION['fullname'] = $user['fullname'] ?? $user['name'] ?? 'User';
+                $_SESSION['avatar']   = $user['avatar'] ?? null;
 
                 // Redirect after login successful
                 header('Location: dashboard.php');

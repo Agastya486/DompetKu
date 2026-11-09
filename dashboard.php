@@ -134,8 +134,14 @@ $userName     = htmlspecialchars($_SESSION['fullname'] ?? 'User');
 
       <div class="flex items-center gap-3">
         <a href="profile.php"
-          class="w-9 h-9 grid place-items-center rounded-lg border border-line bg-raised text-sm font-semibold text-accent-400 hover:border-accent-600 transition-colors"
-          title="<?= $userName ?>"><?= htmlspecialchars($userInitials) ?></a>
+          class="w-9 h-9 overflow-hidden grid place-items-center rounded-lg border border-line bg-raised text-sm font-semibold text-accent-400 hover:border-accent-600 transition-colors"
+          title="<?= $userName ?>">
+          <?php if (!empty($_SESSION['avatar'])): ?>
+            <img src="uploads/<?= htmlspecialchars($_SESSION['avatar']) ?>" alt="Avatar" class="w-full h-full object-cover" />
+          <?php else: ?>
+            <?= htmlspecialchars($userInitials) ?>
+          <?php endif; ?>
+        </a>
         <a href="logout.php" class="text-sm text-ink-muted hover:text-danger transition-colors">Keluar</a>
       </div>
     </div>

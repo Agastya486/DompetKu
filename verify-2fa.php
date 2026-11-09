@@ -20,7 +20,7 @@ $email = '';
 
 // Load the user using the id stored in session, not from user input
 try {
-    $stmt = $pdo->prepare("SELECT id, fullname, email, totp_secret FROM users WHERE id = :id LIMIT 1");
+    $stmt = $pdo->prepare("SELECT id, fullname, email, totp_secret, avatar FROM users WHERE id = :id LIMIT 1");
     $stmt->execute([':id' => $_SESSION['pending_user_id']]);
     $user = $stmt->fetch();
 
@@ -56,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($user)) {
                 $_SESSION['user_id']  = $user['id'];
                 $_SESSION['email']    = $user['email'];
                 $_SESSION['fullname'] = $user['fullname'] ?? 'User';
+                $_SESSION['avatar']   = $user['avatar'] ?? null;
 
                 unset($_SESSION['pending_user_id'], $_SESSION['mfa_attempts']);
 
